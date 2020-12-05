@@ -18,7 +18,7 @@ sub load {
 
     unless ($images) {
         $images = $self->_load_bulk();
-        $cache->set('images', $images, 60);
+        $cache->set('images', $images, 300);
     }
 
     return $images;
@@ -27,25 +27,24 @@ sub load {
 sub _load_bulk {
     my $self = shift;
 
-    my %images = ();
+    my @images = ();
 
     my $count = 1;
     my $page;
 
     do {
-
-        # Get All the images
         $page = $self->_get_images(page => $count);
 
         for (@{$page->{pictures}}) {
             my $img = $self->_get_image_info(id => $_->{id});
-            $images{$img->{id}} = $img;
+
+            push @images, $img;
         }
 
         $count++;
-    } while ($page->{hasMore});
+    } while ($page->{hasMore} && $count < 2);
 
-    return \%images;
+    return \@images;
 }
 
 sub _get_image_info {
@@ -98,6 +97,38 @@ sub _get_headers {
     ];
 
     return $headers;
+}
+
+sub search_by {
+    my $self = shift;
+    my %args = @_;
+
+    my @filtered = grep {
+        if (
+            $self->_filter(author => $args{author}, tag => $args{tag}, camera => $args{camera}, id => $args{id}, image => $_)
+        ) {
+            $_;
+        }
+    } @{$args{images}};
+    return \@filtered;
+}
+
+sub _filter {
+    my $self = shift;
+    my %args = @_;
+
+    my $image = $args{image};
+
+    my %filter = (
+        $args{author} ? (author => $args{author}) : (),
+        $args{tag} ? (tags => $args{tag}) : (),
+        $args{camera} ? (camera => $args{camera}) : (),
+        $args{id} ? (id => $args{id}) : ()
+    );
+
+    my @result = map { $image->{$_} =~ /\Q$filter{$_}/ ? 1 : () } keys %filter;
+
+    return scalar(@result) == scalar (keys %filter);
 }
 
 1;
