@@ -9,6 +9,9 @@ our @ISA = qw(Services::Rest);
 
 use constant URL => 'http://interview.agileengine.com/images';
 
+#my $token = '210b0f36c5ccb5acc3d70a597c32586de075c893';
+my $token;
+
 sub load {
     my $self = shift;
 
@@ -62,6 +65,30 @@ sub _get_image_info {
     return JSON::XS::decode_json($response->content());
 }
 
+sub _get {
+    my $self = shift;
+    my %args = @_;
+
+    my $retry = 2;
+    my $response;
+
+    do {
+        $response = $self->SUPER::_get(%args);
+
+        if ($response && !$response->is_success()) {
+            my $result = JSON::XS::decode_json($response->content());
+            if ($result && $response->code() == 401 && $result->{status} eq 'Unauthorized') {
+                $token = '';
+            }
+        } else {
+            $retry = 0;
+        }
+        $retry--;
+    } while ($retry > 0);
+
+    return $response;
+}
+
 sub _get_images {
     my $self = shift;
     my %args = @_;
@@ -83,8 +110,10 @@ sub _get_images {
 sub _get_token {
     my $self = shift;
 
-    my $token = Services::Rest::Auth->get_token_info();
-    return $token->{token};
+    return $token if $token;
+
+    $token = Services::Rest::Auth->get_token_info()->{token};
+    return $token;
 }
 
 sub _get_headers {

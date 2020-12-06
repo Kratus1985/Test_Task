@@ -10,6 +10,8 @@ use Services::Rest::Images;
 
 my $service = Services::Rest::Images->new();
 
+$service->load();
+
 get '/' => sub {
     my $self = shift;
 
