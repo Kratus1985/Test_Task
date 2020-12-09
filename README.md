@@ -9,7 +9,7 @@ Cache::Memory::Simple
 Mojolicious https://mojolicious.org/
 
 # How to run it
-perl main.pl
+morbo main.pl
 
 # How to use it
 ### All images
